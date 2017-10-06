@@ -120,6 +120,7 @@ namespace ZXt2txt
         byte tapHeaderBlockDataType;
         int tapHeaderCodeLength;
         int tapHeaderCodeStart;
+        int tapHeaderExtWord;
         int tapBlockLength;
         int tapCheckSum;
 
@@ -166,6 +167,7 @@ namespace ZXt2txt
                 tapHeaderBlockDataType = tapHeaderBlock[1]; 
                 tapHeaderCodeLength = BitConverter.ToUInt16(tapHeaderBlock, 12);
                 tapHeaderCodeStart = BitConverter.ToUInt16(tapHeaderBlock, 14);
+                tapHeaderExtWord = BitConverter.ToUInt16(tapHeaderBlock, 16);
 
                 //FileHeader header = new FileHeader(tapHeaderBlock);
             }
@@ -238,20 +240,33 @@ namespace ZXt2txt
                 // other code block with header (not recognized type)
                 // extension from according to tapHeaderBlockDataType
                 if (tapHeaderBlockDataType == 3)
+                {
                      fileExtension = ".code";   // code (or screen)
+                }
                 else if (tapHeaderBlockDataType == 2)
-                     fileExtension = ".aarray"; // alphanumeric data array
+                {
+                    if (tapHeaderCodeStart == 0xC620 && tapHeaderExtWord == 0x0D20)
+                        fileExtension = ".mf09"; // MasterFile V0.9 (original)
+                    if (tapHeaderCodeStart == 0xC600 && tapHeaderExtWord == 0x0D00)
+                        fileExtension = ".mf104"; // MasterFile V1.04 (CZmod)
+                    else
+                        fileExtension = ".aarray"; // alphanumeric data array
+                }
                 else if (tapHeaderBlockDataType == 1)
+                {
                      fileExtension = ".narray"; // numeric data array                     
+                }
                 else if (tapHeaderBlockDataType == 0)
+                {
                      fileExtension = ".basic"; // basic block 
+                }
                 else 
                      fileExtension = ".unknown";
             }
             else
             {
                 // code block without header, file name is generated
-                sbFileName.Append("LessHeaderDataBlock ");
+                sbFileName.Append("LessHeaderDataBlock");
                 sbFileName.Append((lhFfilesCounter++).ToString().PadLeft(4,'0'));
                 fileExtension = ".unknown";
             }
