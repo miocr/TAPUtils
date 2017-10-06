@@ -17,10 +17,10 @@
             "preLaunchTask": "build",
             "program": "${workspaceRoot}/bin/Debug/netcoreapp1.1/TAPUtils.dll",
             "windows": {
-                "args": ["CC-TXT5-test.tap"]
+                "args": ["CC-TXT5.tap"]
             },
             "osx": {
-                "args": ["CC-TXT5-test.tap"]
+                "args": ["CC-TXT5.tap"]
             },
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,

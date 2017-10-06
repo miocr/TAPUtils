@@ -12,6 +12,17 @@
                 "reveal": "silent"
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "taskName": "publish",
+            "type": "shell",
+            "group": "none",
+            "windows": {
+                "command": "dotnet publish -c release -r win7-x64;"
+            },
+            "osx": {
+                "command": "dotnet publish -c release -r osx.10.11-x64;"
+            }
         }
     ]
 }
