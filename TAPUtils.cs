@@ -110,25 +110,30 @@ namespace ZXt2txt
 
         private FileStream input;
         private FileStream output;
-        byte[] tapWord = new byte[2];
-        byte[] tapFileName = new byte[10];
-        byte[] tapHeaderBlock = new byte[19];
+        int lhFfilesCounter;
+        byte[] tapWord;
+        byte[] tapFileName;
+        byte[] tapHeaderBlock;
         byte[] tapDataBlock;
-        byte tapHeaderBlockFlag;
+        byte tapBlockFlag;
+        bool fileNameFromHeader;
         byte tapHeaderBlockDataType;
         int tapHeaderCodeLength;
         int tapHeaderCodeStart;
         int tapBlockLength;
         int tapCheckSum;
+
         int ret;
 
-        public string GetZXTokenString(int code)
+        public TAPUtils()
         {
-            if (zxTokens.ContainsKey(code))
-                return zxTokens[code];
-            else
-                return string.Empty;
+            fileNameFromHeader = false;
+            lhFfilesCounter = 0;
+            tapWord = new byte[2];
+            tapFileName = new byte[10];
+            tapHeaderBlock = new byte[19];
         }
+
         public void ExportCodeBlocks(string tapFileNamePath)
         {
             input = File.OpenRead(tapFileNamePath);
@@ -137,46 +142,35 @@ namespace ZXt2txt
             {
                 tapBlockLength = BitConverter.ToUInt16(tapWord, 0);
                 ReadTapBlock(tapBlockLength);
-
-                // check last block type 
-                if (tapHeaderBlockFlag == 255)
+                if (tapBlockFlag > 0)
                 {
-                    // save only if last block was CODE/SCREEN$ 
-                    // and code start is 32768 (dtext) or 32000 (tasword2)
-                    string fileName;
-                    if (tapHeaderBlockDataType == 3 &&
-                        (tapHeaderCodeStart == 32000 || tapHeaderCodeStart == 32768))
-                    {
-                        fileName = SaveDataBlock();
-                        if (string.IsNullOrEmpty(fileName))
-                        {
-                            // not saved
-                        }
-                    }
+                    // no header block type
+                    bool saveResult = SaveDataBlock();
                 }
             }
         }
 
         private void ReadTapBlock(int tapBlockLength)
         {
-
             // First byte from data block = flag
-            tapHeaderBlockFlag = (byte)input.ReadByte();
-            if (tapHeaderBlockFlag == 0 && tapBlockLength == 19)
+            tapBlockFlag = (byte)input.ReadByte();
+            if (tapBlockFlag == 0 && tapBlockLength == 19)
             {
                 // header 
-                tapHeaderBlock[0] = tapHeaderBlockFlag;
+                tapHeaderBlock[0] = tapBlockFlag;
+                // flag for next data block, that have header
+                fileNameFromHeader = true;
 
                 // read rest header values (without tapDataBlockFlag )
                 input.Read(tapHeaderBlock, 1, tapBlockLength - 1);
-                tapHeaderBlockDataType = tapHeaderBlock[1]; // DULEZITE
+                tapHeaderBlockDataType = tapHeaderBlock[1]; 
                 tapHeaderCodeLength = BitConverter.ToUInt16(tapHeaderBlock, 12);
-                if (tapHeaderBlockDataType == 3) // CODE and SCREEN data block
-                    tapHeaderCodeStart = BitConverter.ToUInt16(tapHeaderBlock, 14);
+                tapHeaderCodeStart = BitConverter.ToUInt16(tapHeaderBlock, 14);
 
                 //FileHeader header = new FileHeader(tapHeaderBlock);
             }
-            else if (tapHeaderBlockFlag == 0xFF && ((tapBlockLength - 2) == tapHeaderCodeLength))
+            else if (fileNameFromHeader && tapBlockFlag == 255
+                    && ((tapBlockLength - 2) == tapHeaderCodeLength))
             {
                 // flag of header data block (data for last header)
                 tapDataBlock = new byte[tapBlockLength - 2];
@@ -186,50 +180,82 @@ namespace ZXt2txt
             else
             {
                 // unsuported blocktype, only read for seek 
-                // -- word block lenfgt + 1 checksum
-                //tapDataBlock = new byte[tapBlockLength -2 + 1];
-                //input.Read(tapDataBlock,0,tapBlockLength -2 + 1);
-                input.Seek(tapBlockLength - 2 + 1, SeekOrigin.Current);
+                // block length - 2 (dw = length) + 1 (byte = checksum)
+                // input.Seek(tapBlockLength - 2 + 1, SeekOrigin.Current);
+                tapDataBlock = new byte[tapBlockLength - 2 + 1];
+                input.Read(tapDataBlock, 0, tapBlockLength - 2 + 1);
             }
         }
 
-        private string SaveDataBlock()
+        private bool SaveDataBlock()
         {
             // ZX file name conversion (codes > 0x7F)
             Array.Copy(tapHeaderBlock, 2, tapFileName, 0, 10);
 
+
+            // create usable file name from zx header name 
             StringBuilder sbFileName = new StringBuilder();
-            for (int i = 0; i < 10; i++)
+            if (fileNameFromHeader)
             {
-                if (tapFileName[i] > 0x7F || (tapFileName[i] < 0x20))
+                // prepare output filename from last header block
+                for (int i = 0; i < 10; i++)
                 {
-                    // replace CODES from BASIC TOKENS etc.
-                    //tapFileName[i] = (byte)'_';
-                    sbFileName.Append(GetZXTokenString(tapFileName[i]));
-                }
-                else
-                {
-                    sbFileName.Append(Encoding.UTF8.GetString(tapFileName, i, 1));
+                    if (tapFileName[i] > 0x7F || (tapFileName[i] < 0x20))
+                    {
+                        // replace codes in header name as ZX BASIC TOKENS
+                        sbFileName.Append(GetZXTokenString(tapFileName[i]));
+                    }
+                    else
+                    {
+                        sbFileName.Append(Encoding.UTF8.GetString(tapFileName, i, 1));
+                    }
                 }
             }
 
             bool textFileCheck = CheckTextFileContent();
-            string fileExtension;
-            if (textFileCheck && tapHeaderCodeStart == 32000)
+            string fileExtension = String.Empty;
+            if (fileNameFromHeader && 
+                textFileCheck && tapHeaderCodeStart == 32000)
             {
-                fileExtension = ".twt"; // tasword
+                // Tasword2CZ or Tasword2BSC (can't be distinguished)
+                fileExtension = ".tw2cz";
             }
-            else if (textFileCheck && tapHeaderCodeStart == 32768)
+            else if (fileNameFromHeader && 
+                    textFileCheck && tapHeaderCodeStart == 32768)
             {
-                fileExtension = ".dtt"; // d-text (spectral writer)
+                // D-textCZ (SpectralWriter)
+                fileExtension = ".dtcz";
+            }
+            else if (fileNameFromHeader && tapHeaderBlockDataType == 3 &&
+                    tapHeaderCodeStart == 16384 && tapHeaderCodeLength == 6912)
+            {
+                // compatibility extension with ZX Paintbrush
+                // http://www.zx-modules.de/zxpaintbrush/zxpaintbrush.html
+                fileExtension = ".scr";
+            }
+            else if (fileNameFromHeader)
+            {   
+                // other code block with header (not recognized type)
+                // extension from according to tapHeaderBlockDataType
+                if (tapHeaderBlockDataType == 3)
+                     fileExtension = ".code";   // code (or screen)
+                else if (tapHeaderBlockDataType == 2)
+                     fileExtension = ".aarray"; // alphanumeric data array
+                else if (tapHeaderBlockDataType == 1)
+                     fileExtension = ".narray"; // numeric data array                     
+                else if (tapHeaderBlockDataType == 0)
+                     fileExtension = ".basic"; // basic block 
+                else 
+                     fileExtension = ".unknown";
             }
             else
             {
-                Console.WriteLine("NOT tsw/dtx file: " + sbFileName.ToString());
-                return null;
+                // code block without header, file name is generated
+                sbFileName.Append("LessHeaderDataBlock ");
+                sbFileName.Append((lhFfilesCounter++).ToString().PadLeft(4,'0'));
+                fileExtension = ".unknown";
             }
 
-            //Path.Combine(Encoding.UTF8.GetString(tapFileName) + fileExtension);
             sbFileName.Append(fileExtension);
             string fileName = sbFileName.ToString();
             foreach (char c in System.IO.Path.GetInvalidFileNameChars())
@@ -239,14 +265,17 @@ namespace ZXt2txt
 
             output = File.OpenWrite(Path.Combine("files", fileName));
             output.Write(tapDataBlock, 0, tapDataBlock.Length);
+
+            // filename from last header is used
+            fileNameFromHeader = false;
+
             output.Flush();
             output.Dispose();
 
             Console.WriteLine("Saved: " + fileName);
 
-            return fileName;
+            return true;
         }
-
         private bool CheckTextFileContent()
         {
             bool result;
@@ -254,7 +283,7 @@ namespace ZXt2txt
             int vowelRatio;
 
             string vowels = "aeiou";
-            for (int i=0; i < tapBlockLength-2; i++)
+            for (int i = 0; i < tapBlockLength - 2; i++)
             {
                 if (vowels.IndexOf((char)tapDataBlock[i]) > 0)
                     vowelCount++;
@@ -262,13 +291,22 @@ namespace ZXt2txt
             if (vowelCount == 0)
                 return false;
 
-            vowelRatio = ((tapDataBlock.Length-2)/vowelCount);
+            vowelRatio = ((tapDataBlock.Length - 2) / vowelCount);
             result = (vowelRatio > 2); // more vowels then 10% = sign text data block
             return result;
         }
 
+        private string GetZXTokenString(int code)
+        {
+            if (zxTokens.ContainsKey(code))
+                return zxTokens[code];
+            else
+                return string.Empty;
+        }
+
     }
 
+    /*
     class FileHeader
     {
         byte flag;
@@ -319,5 +357,6 @@ namespace ZXt2txt
         }
 
     }
-
+    
+     */
 }
