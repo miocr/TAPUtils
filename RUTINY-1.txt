@@ -1,0 +1,351 @@
+                ***                          ***                
+                ***      UŽITEČNÉ RUTINY     ***                
+                ***                          ***                
+                                                                
+              opsáno ze sborníku  VZÚ NHKG Ostrava              
+                      Rozšíření možností I.                     
+                                                                
+                                                                
+ 1/  Přepnutí výstupu z obrazovky na tiskárnu a zpět            
+                                                                
+     Tiskárna    POKE 23743,80                                  
+     Obrazovka   POKE 23743,83                                  
+                                                                
+     Příslušný POKE směruje všechny výstupy příkazů PRINT, LIST,
+PLOT a DRAW na žádaný kanál.                                    
+                                                                
+                                                                
+ 2/  Vytvoření funkce ADDR                                      
+                                                                
+     funkce ADDR vrací paměťovou adresu  prvního  datového  byte
+stringu nebo stringového pole.  Změníme-li  přičítací  konstanty
+4 a 5 na 6 a 7, bude funkce pracovat stejně jako LEN A$.        
+                                                                
+     1000 DEF FN Z(Z$)=PEEK((PEEK 23563+256*PEEK 23564)+4)+256* 
+                       PEEK((PEEK 23563+256*PEEK 23564)+5)      
+                                                                
+Příklad:       LET A$="Ahoj"                                    
+               PRINT FN Z(A$)     ==> vrátí paměťovou adresu, na
+                                      které leží string 'A'     
+               DIM A$(2,3,4)                                    
+               PRINT FN Z(A$(2,1))    ==> vrátí paměťovou adresu
+               prvku pole A$(2,1)                               
+                                                                
+                                                                
+ 3/  Odstranění systémového hlášení "Start tape, then press ..."
+                                                                
+     POKE 23736,187 umístěné před každý SAVE                    
+                                                                
+                                                                
+ 4/  Nastavení CURSOR módu                                      
+                                                                
+     POKE 23658,0    L mód                                      
+     POKE 23658,8    C mód                                      
+     POKE 23617,1    E mód                                      
+     POKE 23617,2    G mód                                      
+                                                                
+                                                                
+ 5/  UTAJENÍ PROGRAMU                                           
+                                                                
+     POKE 23570,10   odpojí klávesu EDIT                        
+     POKE 23570,16   zastaví listování při stisku ENTER         
+     POKE 23613,0    BREAK zhroutí systém                       
+                                                                
+     POKE 23613,82   odpojí BREAK rutinu                        
+     POKE 23613,84   odpojí BREAK klávesu (každé RUN, CLEAR, GO-
+                     SUB, RETURN tuto hodnotu mění)             
+                                                                
+     POKE 23613,0                                               
+     SAVE "Basic prog" CODE 23552,lenght                        
+     GOTO start line                      uchová Basic jako CODE
+                                                                
+     POKE 23659,0    zavede nulovou editační zónu, není kam vyp-
+                     sat systémové hlášení (zhroucení systému)  
+     POKE 23756,0    vytvoří řádek s číslem 0 (nelze editovat)  
+     POKE 23755,100  vytvoří první řádek s číslem 25600.  Nefun-
+                     guje LIST, nelze udělat  MERGE,  pokud  byl
+                     proveden SAVE "prog" LINE.                 
+                                                                
+                                                                
+ 6/  Funkce RND v intervalu (A,B) ... INT(RND*(B-A)+1)+A        
+                                                                
+ 7/  Volná paměť    ... PRINT 65536 - USR 7962                  
+                                                                
+ 8/  SCROLL obrazovky o jeden řádek nahoru .. RANDOMIZE USR 3190
+                                                                
+                                                                
+ 9/  Efektívní využití I/O příkazů                              
+                                                                
+     V příkazech PRINT, LPRINT, LIST, LLIST A INPUT lze s  výho-
+dou používat prefixu pro nastavení výstupního portu - #X. Prefix
+může nabývat hodnot 0-3 a určuje způsob  výstupu  informace  bez
+ohledu na typ použité instrukce.                                
+                                                                
+     #0, #1    výstup bude směřovat do dolních 2 řádků obraz.   
+     #2        adresuje obrazovku jako standartní PRINT         
+     #3        výstup bude na tiskárně                          
+                                                                
+Příklad:       10 FOR I=2 TO 3                                  
+               20 PRINT #I; "text"                              
+               30 NEXT I                                        
+                                                                
+     Program vytiskne řetězec "text" nejprve na obrazovce a  po-
+tom na tiskárně (výsledek by byl stejný i pro LPRINT).          
+     V příkaze INPUT lze použít '#2' pro tisk řetězce  na  stan-
+dartní PRINT pozici, ale vstup informace musí být vždy  na  '#0'
+nebo '#1'. Zkuste  1000 INPUT #2; "hlášení"; #0; A$             
+                                                                
+                                                                
+10/  Řešení soustavy lineárních rovnic                          
+                                                                
+     FOR K=1 TO N-1                                             
+     FOR I=K+1 TO N                                             
+     IF ABS A(K,K)<1E-6 THEN PRINT "matice je singulární" :STOP 
+     LET A=A(I,K)/A(K,K)                                        
+     FOR J=K+1 TO N+1                                           
+     LET A(I,J)=A(I,J)-A(K,J)*A                                 
+     NEXT J: NEXT I: NEXT K                                     
+                                                                
+     N - počet rovnic   A(N,N+1) - rozšířená matice koeficientů 
+                                                                
+                                                                
+11/  Determinant matice                                         
+                                                                
+     LET D=1                                                    
+     FOR K=1 TO N                                               
+     LET D=D*A(K,K)                                             
+     NEXT K                                                     
+     FOR I=N TO 1 STEP -1                                       
+     LET A=0                                                    
+     IF I<N THEN FOR J=I+1 TO N: LET A=A+A(I,J)*A(J,N): NEXT J  
+     LET A(I,N)=(A(I,N)-A)/A(I,I)                               
+     NEXT I                                                     
+                                                                
+                                                                
+12/  Výpočet inverzní matice                                    
+                                                                
+     FOR L=1 TO N                                               
+     LET K=A(L,L): LET A(L,L)=1                                 
+     FOR I=1 TO N                                               
+     IF I=L THEN GOTO 8                                         
+     IF NOT K THEN GOTO 9                                       
+     LET C=A(I,L)/K                                             
+     FOR J=1 TO N                                               
+     IF J=L THEN GOTO 7                                         
+     LET A(I,J)=A(I,J)-C*A(L,J)                                 
+   7 NEXT J                                                     
+     LET A(I,L)=-C                                              
+   8 NEXT I                                                     
+   9 IF NOT K THEN PRINT "matice je singulární": STOP           
+     FOR S=1 TO N                                               
+     LET A(L,S)=A(L,S)/K                                        
+     NEXT S                                                     
+     NEXT L                                                     
+                                                                
+                                                                
+13/  Otevření obrazovky a nastavení polohy pro výstup znaku     
+                                                                
+     CALL #0D6B     (CLS)                                       
+     LD A,2                                                     
+     CALL #1601     (otevření obrazovky)                        
+     LD BC,#RRSS    (RR=řádek, SS=sloupec, příkazu AT 0,0  odpo-
+     CALL #0DD9      vídá #1821)                                
+                                                                
+                                                                
+14/  Rezervace polí (simulace DIM)                              
+                                                                
+     Rutina je provedena pro  dvourozměrné  pole  znaků.  Umožní
+přístup ze strojového kódu i z Basicu. Z proměnné  VARS  získáme
+počáteční adresu proměnných. Vyvoláním CALL #1655  zarezervujeme
+prostor potřebné délky, tj. počet*délka+8.  Do  prvních  8  byte
+uvedeme:                                                        
+               Byte 1    označení proměnné (CODE+128)           
+               Byte 2,3  celková délka (počet*délka+5)          
+               Byte 4    počet dimenzí (2)                      
+               Byte 5,6  počet polí                             
+               Byte 7,8  délka pole                             
+                                                                
+     Zbývající Byte naplníme mezerami.  Poslední  pole  naplníme
+hodnotou 128 do každého Byte. Rutina musí proběhnout před aloka-
+cí proměnných v Basicu.                                         
+                                                                
+     ANZA   EQU  40   (počet polí+1, poslední pole zaplněno 128)
+     LAEN   EQU  100  (délka polí)                              
+     VARS   EQU  23627                   LD   BC,LAEN           
+     START  LD   HL,(VARS)               LD   (HL),C            
+            PUSH HL                      INC  HL                
+            LD   BC,ANZA*LAEN+8          LD   (HL),B            
+            CALL #1655                   INC  HL                
+            POP  HL                      LD   (HL),' '          
+            PUSH HL                      LD   D,H               
+            LD   (HL),193                LD   E,L               
+            INC  HL                      INC  DE                
+            LD   BC,ANZA*LAEN+5          LD   BC,ANZA*LAEN-1    
+            LD   (HL),C                  LDIR                   
+            INC  HL                      POP  HL                
+            LD   (HL),B                  LD   DE,ANZA-1*LAEN+8  
+            INC  HL                      ADD  HL,DE             
+            LD   (HL),2                  LD   BC,LAEN+1         
+            INC  HL                LOOP1 LD   (HL),128          
+            LD   BC,ANZA                 INC  HL                
+            LD   (HL),C                  DEC  BC                
+            INC  HL                      LD   A,B               
+            LD   (HL),B                  OR   C                 
+            INC  HL                      JR   NZ,LOOP1          
+                                                                
+                                                                
+15/  Nastavení barvy INK, PAPER, BORDER                         
+                                                                
+     INK    EQU  7                                              
+     PAPER  EQU  0                       LD   A,17              
+     BORDER EQU  0                       RST  16                
+     COLOR  CALL #0D4D                   LD   A,PAPER           
+            LD   A,16                    RST  16                
+            RST  16                      CALL #1CAD             
+            LD   A,INK                   LD   A,BORDER          
+            RST  16                      CALL #229B             
+            CALL #1CAD                   RET                    
+                                                                
+                                                                
+16/  Tisk textového řetězce na obrazovce                        
+                                                                
+     Příklad použití:     LD   HL,DATA                          
+                          CALL PRINT1                           
+                   DATA   DEFW #1821    poloha prvního znaku    
+                          DEFB 6        počet znaků             
+                          DEFM "text"   text                    
+                          DEFB 13       CR (konec řádku)        
+                          DEFB 128      znak konce vstupu       
+                                                                
+     PRINT1 LD   B,(HL)                                         
+            INC  HL                      INC  HL                
+            LD   C,(HL)                  PUSH HL                
+            INC  HL                      RST  16                
+            PUSH HL                      POP  HL                
+            CALL #0DD9                   POP  BC                
+            POP  HL                      DJNZ PRINT2            
+            LD   B,(HL)                  LD   A,(HL)            
+            INC  HL                      CP   128               
+     PRINT2 PUSH BC                      JR   NZ,PRINT1         
+            LD   A,(HL)                  RET                    
+                                                                
+                                                                
+17/  převod desítkového čísla do HEXA                           
+                                                                
+     Rutina čte tří nebo pětimístné číslo z klávesnice,tiskne je
+na obrazovce a výsledek uloží v HEXA do paměti na adresu  MULT2.
+Volání pro pětimístné číslo je CALL MULTIP, pro  třímístné  CALL
+ZU100. Před voláním musíme  nastavit  tiskovou  pozici.  Princip
+práce je jednoduchý. Čísla jsou postupně čtena a v případě nenu-
+lové čislice je příslušný faktor  přičten  tolikrát  kolik  činí
+hodnota číslice.                                                
+                                                                
+     MULT   DEFW 0                       CP   13                
+     MULT1  DEFB 0                       RET  Z                 
+     MULT2  DEFW 0                       CALL MULTIQ            
+     MULTIP LD   HL,10000                JR   ZU1               
+            LD   (MULT),HL               LD   (MULT1),A         
+            CALL GET                     CALL MULTI             
+            CP   13                      LD   (MULT2),HL        
+            RET  Z                ZU1    CALL GET               
+            CALL MULTIQ                  CP   13                
+            JR   Z,ZU1000                RET  Z                 
+            LD   (MULT1),A               PUSH AF                
+            CALL  ULTI                   REST 16                
+            LD   (MULT2),HL              POP  AF                
+     ZU1000 LD   HL,1000                 AND  %00001111         
+            LD   (MULT),HL               LD   HL,MULT2          
+            CALL GET                     LD   E,A               
+            CP   13                      LD   D,0               
+            RET  Z                       ADD  HL,DE             
+            CALL MULTIQ                  LD   A,0               
+            JR   Z,ZU100                 LD   (MULT1),A         
+            LD   (MULT1),A               LD   DE,0              
+            CALL MULTI                   LD   (MULT),DE         
+            LD   (MULT2),HL              LD   (MULT2),HL        
+     ZU100  LD   HL,100                  RET                    
+            LD   (MULT),HL        MULTI  LD   A,(MULTI)         
+            CALL GET                     LD   B,A               
+            CP   13                      LD   HL,(MULT2)        
+            RET Z                 MULT3  ADD  HL,DE             
+            CALL MULTIQ                  DJNZ MULT3             
+            JR   Z,ZU10                  RET                    
+            LD   (MULT1),A        MULTIQ PUSH AF                
+            CALL MULTI                   RST  16                
+            LD   (MULT2),HL              POP  AF                
+       ZU10 LD   HL,10                   AND  %00001111         
+            LD   (MULT),HL               CP   0                 
+            CALL GET                     RET                    
+                                                                
+                                                                
+18/  Čtení klávesnice a stringů                                 
+                                                                
+     Rutina čte klávesnici, přičemž mění některé znaky na němec-
+ké přehlásky (a,s,d,f,,w,e). Program nechá  v  registru  A  CODE
+stlačené klávesy. Pro uchování znaku je použit  Byte  na  adrese
+23728 (pozor při použití Beta DISC).                            
+     Rutina INPUT umožňuje číst z klávesnice zadaný počet znaků,
+čtení přerušit znakem CR, znaky uloží přímo do datového  pole  a
+vypíše na obrazovce. Do registru HL dáváme adresu místa pro ulo-
+žení znaku, do registru B maximální počet znaků.                
+                                                                
+     PAUSE  EQU  #1F3D                   LD   A,124             
+     GET1   LD   BC,50                   RET                    
+            CALL PAUSE            GET8   CP   205               
+            LD   HL,23728                JR   NZ,GET9           
+            LD   (HL),' '                LD   A,125             
+            RES  5,(IY+1)                RET                    
+            CALL GET2             GET9   CP   199               
+            RET                          JR   NZ,GET10          
+     GET2   CALL GET3                    LD   A,91              
+            LD   DE,23728                RET                    
+            LD   (23728),A        GET10  CP   201               
+            LD   BC,0                    JR   NZ,GET11          
+            CP   0                       LD   A,92              
+            JR   Z,GET1                  RET                    
+            INC  C                GET11  CP   200               
+            RET                          JR   NZ,GET12          
+     GET3   LD   A,(#5C07)               LD   A,93              
+            CP   255                     RET                    
+            JR   NZ,GET4          GET12  CP   204               
+            LD   A,0                     RET  NZ                
+            RET                          LD   A,126             
+     GET4   CALL #028E                   RET                    
+            LD   C,0              INPUT1 PUSH BC                
+            JR   Z,GET5                  PUSH HL                
+            LD   A,0                     CALL GET               
+     GET5   CALL #031E                   CP   13                
+            JR   C,GET6                  JR   Z,INPUT2          
+            LD   A,0                     POP  HL                
+     GET6   DEC  D                       LD   (HL),A            
+            LD   E,A                     RST  16                
+            CALL #0333                   POP  BC                
+            RET                          INC  HL                
+     GET    CALL GET1                    DJNZ INPUT1            
+            CP   226                     JR   INPUT3            
+            JR   NZ,GET7          INPUT2 POP  BC                
+            LD   A,123                   POP  BC                
+            RET                   INPUT3 LD   A,13              
+     GET7   CP   195                     RST  16                
+            JR   NZ,GET8                 RET                    
+                                                                
+                                                                
+19/  LOAD a SAVE bez návěští                                    
+                                                                
+     LOAD        zaveď soubor bez návěští                       
+     SAVE        ulož soubor bez návěští                        
+     LOAD-H      zaveď soubor s návěštím                        
+     SAVE-H      ulož soubor s návěštím                         
+                                                                
+     PLACE       počáteční adresa                               
+     LENGHT      délka (počet Byte)                             
+     HEADER      počáteční adresa návěští                       
+                                                                
+     Forma návěští:  Byte 01       typ  0 Basic                 
+                                        1 Čislicové pole        
+                                        2 znakové pole          
+                                        3 CODE                  
+                     Byte 02-11    označení souboru             
+                     Byte 12-13    délka souboru                
+                     Byte 14-15    počáteční adresa             
+                     Byte 16-17    délka programu 
