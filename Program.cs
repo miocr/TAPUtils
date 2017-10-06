@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 
-namespace ZXt2txt
+namespace TAPUtils
 {
     class Program
     {
