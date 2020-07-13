@@ -247,7 +247,7 @@ namespace TAPUtils
                 {
                     if (tapHeaderCodeStart == 0xC620 && tapHeaderExtWord == 0x0D20)
                         fileExtension = ".mf09"; // MasterFile V0.9 (original)
-                    if (tapHeaderCodeStart == 0xC600 && tapHeaderExtWord == 0x0D00)
+                    else if (tapHeaderCodeStart == 0xC600 && tapHeaderExtWord == 0x0D00)
                         fileExtension = ".mf104"; // MasterFile V1.04 (CZmod)
                     else
                         fileExtension = ".aarray"; // alphanumeric data array
@@ -294,8 +294,8 @@ namespace TAPUtils
         private bool CheckTextFileContent()
         {
             bool result;
-            int vowelCount = 0;
-            int vowelRatio;
+            float vowelCount = 0;
+            float vowelRatio;
 
             string vowels = "aeiou";
             for (int i = 0; i < tapBlockLength - 2; i++)
@@ -303,11 +303,13 @@ namespace TAPUtils
                 if (vowels.IndexOf((char)tapDataBlock[i]) > 0)
                     vowelCount++;
             }
-            if (vowelCount == 0)
-                return false;
+            // if (vowelCount == 0)
+            //     return false;
 
-            vowelRatio = ((tapDataBlock.Length - 2) / vowelCount);
-            result = (vowelRatio > 2); // more vowels then 10% = sign text data block
+            vowelRatio = vowelCount / ((tapDataBlock.Length - 2) );
+            // more vowels then 10% = sign as text data block
+            result = (vowelRatio * 100 > 10); 
+
             return result;
         }
 
