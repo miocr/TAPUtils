@@ -183,7 +183,6 @@ namespace TAPUtils
             {
                 // unsuported blocktype, only read for seek 
                 // block length - 2 (dw = length) + 1 (byte = checksum)
-                // input.Seek(tapBlockLength - 2 + 1, SeekOrigin.Current);
                 tapDataBlock = new byte[tapBlockLength - 2 + 1];
                 input.Read(tapDataBlock, 0, tapBlockLength - 2 + 1);
             }
@@ -193,7 +192,6 @@ namespace TAPUtils
         {
             // ZX file name conversion (codes > 0x7F)
             Array.Copy(tapHeaderBlock, 2, tapFileName, 0, 10);
-
 
             // create usable file name from zx header name 
             StringBuilder sbFileName = new StringBuilder();
@@ -232,7 +230,7 @@ namespace TAPUtils
                     tapHeaderCodeStart == 16384 && tapHeaderCodeLength == 6912)
             {
                 // compatibility extension with ZX Paintbrush
-                // http://www.zx-modules.de/zxpaintbrush/zxpaintbrush.html
+                // http://www.zx-modules.de
                 fileExtension = ".scr";
             }
             else if (fileNameFromHeader)
@@ -344,6 +342,7 @@ namespace TAPUtils
 
         public FileHeader()
         { }
+
         public FileHeader(byte[] headBytes)
         {
             flag = headBytes[0];
@@ -374,6 +373,6 @@ namespace TAPUtils
         }
 
     }
-    
      */
+
 }
